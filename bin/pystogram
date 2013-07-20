@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+
+"""
+pystogram -- Display time-series histograms of Apache-style log files on the command-line.
+
+Sample output:
+
+    $ grep lolcat /var/log/access.log | pystogram
+    2013-07-01 07:12  ##                                                   
+    2013-07-01 07:13  ####                                                700
+    2013-07-01 07:14  #######                                            1234
+    2013-07-01 07:15  ############################                       6873
+    2013-07-01 07:16  ##############                                     3928
+    2013-07-01 07:17  #################                                  4152
+    2013-07-01 07:18  ###############################################   16432
+    2013-07-01 07:19  ######                                               35
+    2013-07-01 07:20  #                                                     7
+"""
+
+import datetime
+import fileinput
+import re
+
+from pystogram.dateutil import guess_resolution, MONTHS
+from pystogram.histogram import Histogram
+from pystogram.tree import Tree
+
+
+#FIXME: Determine width and height from command-line options or console dimensions
+WIDTH = 80
+HEIGHT = None  # unlimited
+
+# FIXME: Make the regex configurable (how?)
+# FIXME: Separate concerns: mapping str to datetime & mapping datetime to tree key path
+TIMESTAMP_REGEX = re.compile(
+    r' \[(?P<day>\d{2})/(?P<month>\w{3})/(?P<year>\d{4}):'
+    r'(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})(?P<offset>\s?(\+|-)\d+)?\] '
+)
+
+
+def main():
+    tree = Tree()
+
+    for line in fileinput.input():
+        match = TIMESTAMP_REGEX.search(line)
+        if match:
+            # FIXME: Move to a method on Tree, like Tree.insert()
+            node = tree
+            node = node[int(match.group('year'))]
+            node = node[MONTHS[match.group('month')]]
+            node = node[int(match.group('day'))]
+            node = node[int(match.group('hour'))]
+            node = node[int(match.group('minute'))]
+            node = node[int(match.group('second'))]
+            node.value += 1
+
+    # Find the sample space boundaries
+    # FIXME: Should this move into Histogram?
+    first_sample = datetime.datetime(*tree.traverse(0))
+    last_sample = datetime.datetime(*tree.traverse(-1))
+
+    # Compute the bucket resolution
+    # FIXME: Allow this to be specified as a command-line option
+    sample_interval = last_sample - first_sample
+    total_seconds = sample_interval.total_seconds()
+    resolution = guess_resolution(total_seconds)
+
+    histogram = Histogram(tree, resolution)
+
+    for bucket in histogram.buckets:
+        print bucket
+
+if __name__ == '__main__':
+    main()
