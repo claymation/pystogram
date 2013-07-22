@@ -22,15 +22,10 @@ import fileinput
 import re
 import time
 
+from pystogram.console import AsciiChart
 from pystogram.dateutil import MONTHS
 from pystogram.histogram import Histogram
 
-
-# FIXME: Determine width from command-line options or console dimensions
-WIDTH = 80
-
-# FIXME: Allow resolution to be specified on command line
-RESOLUTION = None
 
 # FIXME: Make the regex configurable: strptime format string --> regex
 TIMESTAMP_REGEX = re.compile(
@@ -56,10 +51,12 @@ def main():
     for line in fileinput.input():
         timestamp = get_timestamp(line)
         if timestamp is not None:
-            histogram.incr(timestamp)
+            histogram.count(timestamp)
 
-    for bucket in histogram.buckets(RESOLUTION):
-        print bucket
+    # FIXME: Allow width to be specified on command-line
+    chart = AsciiChart(histogram)
+    # FIXME: Allow resolution to be specified on command line
+    chart.draw()
 
 if __name__ == '__main__':
     main()
