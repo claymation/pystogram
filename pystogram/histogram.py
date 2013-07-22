@@ -11,13 +11,12 @@ class Histogram(object):
 
     @property
     def buckets(self):
-        first_sample = datetime.datetime(*self.tree.traverse(0))
-        last_sample = datetime.datetime(*self.tree.traverse(-1))
+        first_sample = datetime.datetime(*self.tree.least())
+        last_sample = datetime.datetime(*self.tree.greatest())
         sample = first_sample
         while sample <= last_sample:
             bucket = Bucket(sample, self.resolution)
-            node = self.tree.find(bucket.parts)
-            bucket.value = node.sum()
+            node = self.tree.sum(bucket.key)
             yield bucket
             sample += self.interval
 
@@ -48,16 +47,16 @@ class Bucket(object):
 
     # FIXME: What to call this?
     @property
-    def parts(self):
-        parts = [self.start.year]
+    def key(self):
+        key = [self.start.year]
         if self.resolution < YEAR:
-            parts.append(self.start.month)
+            key.append(self.start.month)
         if self.resolution < MONTH:
-            parts.append(self.start.day)
+            key.append(self.start.day)
         if self.resolution < DAY:
-            parts.append(self.start.hour)
+            key.append(self.start.hour)
         if self.resolution < HOUR:
-            parts.append(self.start.minute)
+            key.append(self.start.minute)
         if self.resolution < MINUTE:
-            parts.append(self.start.second)
-        return parts
+            key.append(self.start.second)
+        return key

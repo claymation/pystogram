@@ -20,44 +20,46 @@ Sample output:
 import datetime
 import fileinput
 import re
+import time
 
 from pystogram.dateutil import guess_resolution, MONTHS
 from pystogram.histogram import Histogram
 from pystogram.tree import Tree
 
 
-#FIXME: Determine width and height from command-line options or console dimensions
+#FIXME: Determine width from command-line options or console dimensions
 WIDTH = 80
-HEIGHT = None  # unlimited
 
-# FIXME: Make the regex configurable (how?)
-# FIXME: Separate concerns: mapping str to datetime & mapping datetime to tree key path
+# FIXME: Make the regex configurable: strptime format string --> regex
 TIMESTAMP_REGEX = re.compile(
     r' \[(?P<day>\d{2})/(?P<month>\w{3})/(?P<year>\d{4}):'
     r'(?P<hour>\d{2}):(?P<minute>\d{2}):(?P<second>\d{2})(?P<offset>\s?(\+|-)\d+)?\] '
 )
 
+def get_timestamp(line):
+    # FIXME: Parse the timestamp with time.strptime()
+    match = TIMESTAMP_REGEX.search(line)
+    if match:
+        return time.struct_time(sequence=(int(match.group('year')),
+                                          MONTHS[match.group('month')],
+                                          int(match.group('day')),
+                                          int(match.group('hour')),
+                                          int(match.group('minute')),
+                                          int(match.group('second')),
+                                          0, 0, 0))[0:6]
 
 def main():
     tree = Tree()
 
     for line in fileinput.input():
-        match = TIMESTAMP_REGEX.search(line)
-        if match:
-            # FIXME: Move to a method on Tree, like Tree.insert()
-            node = tree
-            node = node[int(match.group('year'))]
-            node = node[MONTHS[match.group('month')]]
-            node = node[int(match.group('day'))]
-            node = node[int(match.group('hour'))]
-            node = node[int(match.group('minute'))]
-            node = node[int(match.group('second'))]
-            node.value += 1
+        timestamp = get_timestamp(line)
+        if timestamp is not None:
+            tree.incr(timestamp)
 
     # Find the sample space boundaries
     # FIXME: Should this move into Histogram?
-    first_sample = datetime.datetime(*tree.traverse(0))
-    last_sample = datetime.datetime(*tree.traverse(-1))
+    first_sample = datetime.datetime(*tree.least())
+    last_sample = datetime.datetime(*tree.greatest())
 
     # Compute the bucket resolution
     # FIXME: Allow this to be specified as a command-line option
