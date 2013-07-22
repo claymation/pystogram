@@ -1,5 +1,7 @@
 import datetime
 
+from pystogram.tree import Tree
+
 
 SECOND = 1
 MINUTE = SECOND * 60
@@ -28,53 +30,76 @@ def prefix(timestamp, resolution):
     return timestamp.timetuple()[:length]
 
 
-class Histogram(object):
-    def __init__(self, tree, resolution=None):
-        self.tree = tree
+def guess_resolution(interval):
+    """
+    Compute a reasonable bucket resolution for the interval.
+    """
+    # FIXME: Improve?
+    if interval > YEAR * RESOLUTION_SCALE:
+        return YEAR
+    elif interval > MONTH * RESOLUTION_SCALE:
+        return MONTH
+    elif interval > DAY * RESOLUTION_SCALE:
+        return DAY
+    elif interval > HOUR * RESOLUTION_SCALE:
+        return HOUR
+    elif interval > MINUTE * RESOLUTION_SCALE:
+        return MINUTE
+    else:
+        return SECOND
 
-        # Find the timestamp space boundaries and interval
-        # FIXME: Subclass Tree into DateTimeTree so we don't have to do these conversions here?
-        self.first_timestamp = datetime.datetime(*tree.least())
-        self.last_timestamp = datetime.datetime(*tree.greatest())
+
+# FIXME: Missing domain concepts: timestamp (essentially a datetime), key (essentially a time.struct_time tuple)
+
+class Histogram(object):
+    """
+    An informal histogram useful for counting time-series data, dividing samples
+    into equally-sized intervals (buckets), and computing aggregate counts of the
+    samples within each bucket.
+    """
+    def __init__(self, Tree=Tree):
+        """
+        Construct a Histogram instance.
+
+        Optional `Tree` parameter specifies the Tree-like class to use to count and aggregate samples.
+        """
+        self.tree = Tree()
+
+    # FIXME: Rename this?
+    def incr(self, timestamp):
+        """
+        Increment the count for this timestamp.
+        """
+        self.tree.incr(timestamp)
+
+    def buckets(self, resolution=None):
+        """
+        Generate and yield buckets sized according to the passed or guessed resolution.
+        """
+        # FIXME: Subclass Tree into DateTimeTree so we don't have to do this conversion here?
+        first_sample = datetime.datetime(*self.tree.least())
+        last_sample = datetime.datetime(*self.tree.greatest())
 
         # Compute the bucket resolution
-        self.resolution = resolution if resolution is not None else self.guess_resolution()
-        self.bucket_interval = datetime.timedelta(seconds=self.resolution)
+        sample_interval = (last_sample - first_sample).total_seconds()
+        resolution = resolution if resolution is not None else guess_resolution(sample_interval)
+        bucket_interval = datetime.timedelta(seconds=resolution)
 
-    def guess_resolution(self):
-        """
-        Compute a reasonable resolution given the timestamp interval.
-        """
-        seconds = (self.last_timestamp - self.first_timestamp).total_seconds()
-        # FIXME: Improve?
-        if seconds > YEAR * RESOLUTION_SCALE:
-            return YEAR
-        elif seconds > MONTH * RESOLUTION_SCALE:
-            return MONTH
-        elif seconds > DAY * RESOLUTION_SCALE:
-            return DAY
-        elif seconds > HOUR * RESOLUTION_SCALE:
-            return HOUR
-        elif seconds > MINUTE * RESOLUTION_SCALE:
-            return MINUTE
-        else:
-            return SECOND
-
-    @property
-    def buckets(self):
-        timestamp = self.first_timestamp
-        while timestamp <= self.last_timestamp:
-            node = self.tree.find(prefix(timestamp, self.resolution))
-            value = node.sum() if node is not None else 0
-            bucket = Bucket(timestamp, value, self.resolution)
+        timestamp = first_sample
+        while timestamp <= last_sample:
+            node = self.tree.find(prefix(timestamp, resolution))
+            bucket = Bucket(timestamp, node, resolution)
             yield bucket
-            timestamp += self.bucket_interval
+            timestamp += bucket_interval
 
 
 class Bucket(object):
-    def __init__(self, start, value, resolution):
+    """
+    Histogram bucket for a given time interval.
+    """
+    def __init__(self, start, node, resolution):
         self.start = start
-        self.value = value
+        self.node = node
 
         # FIXME: Isn't this really a concern for the output formatter?
         self.resolution = resolution
@@ -91,7 +116,14 @@ class Bucket(object):
             self.format += ':%S'
 
     def __str__(self):
-        return '[%s] %s' % (self.timestamp, self.value)
+        return '[%s] %s' % (self.timestamp, self.count)
+
+    @property
+    def count(self):
+        """
+        Return the count of samples in this bucket.
+        """
+        return self.node.sum()
 
     @property
     def timestamp(self):

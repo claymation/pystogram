@@ -24,7 +24,6 @@ import time
 
 from pystogram.dateutil import MONTHS
 from pystogram.histogram import Histogram
-from pystogram.tree import Tree
 
 
 # FIXME: Determine width from command-line options or console dimensions
@@ -52,16 +51,14 @@ def get_timestamp(line):
                                           0, 0, 0))[0:6]
 
 def main():
-    tree = Tree()
+    histogram = Histogram()
 
     for line in fileinput.input():
         timestamp = get_timestamp(line)
         if timestamp is not None:
-            tree.incr(timestamp)
+            histogram.incr(timestamp)
 
-    histogram = Histogram(tree, RESOLUTION)
-
-    for bucket in histogram.buckets:
+    for bucket in histogram.buckets(RESOLUTION):
         print bucket
 
 if __name__ == '__main__':
