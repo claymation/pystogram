@@ -1,32 +1,83 @@
 import datetime
 
-from .dateutil import timedelta_from_seconds, YEAR, MONTH, DAY, HOUR, MINUTE, SECOND
+
+SECOND = 1
+MINUTE = SECOND * 60
+HOUR   = MINUTE * 60
+DAY    = HOUR * 24
+MONTH  = DAY * 30
+YEAR   = DAY * 365
+
+# The multiplier applied when testing timestamp interval to guess a resolution.
+# A value of 2.0 means the timestamp interval must be greater than 24 months in
+# order to use a resolution of years
+RESOLUTION_SCALE = 2.0
+
+
+# FIXME: Where to put this?
+def prefix(timestamp, resolution):
+    """
+    Compute and return a key prefix for this timestamp.
+    """
+    length = 1
+    if resolution < YEAR: length += 1
+    if resolution < MONTH: length += 1
+    if resolution < DAY: length += 1
+    if resolution < HOUR: length += 1
+    if resolution < MINUTE: length += 1
+    return timestamp.timetuple()[:length]
 
 
 class Histogram(object):
-    def __init__(self, tree, resolution):
+    def __init__(self, tree, resolution=None):
         self.tree = tree
-        self.resolution = resolution
-        self.interval = timedelta_from_seconds(resolution)
+
+        # Find the timestamp space boundaries and interval
+        # FIXME: Subclass Tree into DateTimeTree so we don't have to do these conversions here?
+        self.first_timestamp = datetime.datetime(*tree.least())
+        self.last_timestamp = datetime.datetime(*tree.greatest())
+
+        # Compute the bucket resolution
+        self.resolution = resolution if resolution is not None else self.guess_resolution()
+        self.bucket_interval = datetime.timedelta(seconds=self.resolution)
+
+    def guess_resolution(self):
+        """
+        Compute a reasonable resolution given the timestamp interval.
+        """
+        seconds = (self.last_timestamp - self.first_timestamp).total_seconds()
+        # FIXME: Improve?
+        if seconds > YEAR * RESOLUTION_SCALE:
+            return YEAR
+        elif seconds > MONTH * RESOLUTION_SCALE:
+            return MONTH
+        elif seconds > DAY * RESOLUTION_SCALE:
+            return DAY
+        elif seconds > HOUR * RESOLUTION_SCALE:
+            return HOUR
+        elif seconds > MINUTE * RESOLUTION_SCALE:
+            return MINUTE
+        else:
+            return SECOND
 
     @property
     def buckets(self):
-        first_sample = datetime.datetime(*self.tree.least())
-        last_sample = datetime.datetime(*self.tree.greatest())
-        sample = first_sample
-        while sample <= last_sample:
-            bucket = Bucket(sample, self.resolution)
-            node = self.tree.find(bucket.prefix)
-            bucket.value = node.sum() if node is not None else 0
+        timestamp = self.first_timestamp
+        while timestamp <= self.last_timestamp:
+            node = self.tree.find(prefix(timestamp, self.resolution))
+            value = node.sum() if node is not None else 0
+            bucket = Bucket(timestamp, value, self.resolution)
             yield bucket
-            sample += self.interval
+            timestamp += self.bucket_interval
 
 
 class Bucket(object):
-    def __init__(self, start, resolution):
+    def __init__(self, start, value, resolution):
         self.start = start
+        self.value = value
+
+        # FIXME: Isn't this really a concern for the output formatter?
         self.resolution = resolution
-        self.value = 0
         self.format = '%Y'
         if resolution < YEAR:
             self.format += '-%m'
@@ -44,26 +95,7 @@ class Bucket(object):
 
     @property
     def timestamp(self):
+        """
+        Construct a string representation of this bucket's timestamp.
+        """
         return self.start.strftime(self.format)
-
-    @property
-    def prefix(self):
-        """
-        Compute and return a key prefix for this bucket, based on its
-        start timestamp and resolution.
-        
-        For example, a bucket with start timestamp 1969-07-20 20:18:00
-        and resolution of 1 day yields a prefix of (1969, 7, 20).
-        """
-        prefix = [self.start.year]
-        if self.resolution < YEAR:
-            prefix.append(self.start.month)
-        if self.resolution < MONTH:
-            prefix.append(self.start.day)
-        if self.resolution < DAY:
-            prefix.append(self.start.hour)
-        if self.resolution < HOUR:
-            prefix.append(self.start.minute)
-        if self.resolution < MINUTE:
-            prefix.append(self.start.second)
-        return prefix

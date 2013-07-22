@@ -22,13 +22,16 @@ import fileinput
 import re
 import time
 
-from pystogram.dateutil import guess_resolution, MONTHS
+from pystogram.dateutil import MONTHS
 from pystogram.histogram import Histogram
 from pystogram.tree import Tree
 
 
-#FIXME: Determine width from command-line options or console dimensions
+# FIXME: Determine width from command-line options or console dimensions
 WIDTH = 80
+
+# FIXME: Allow resolution to be specified on command line
+RESOLUTION = None
 
 # FIXME: Make the regex configurable: strptime format string --> regex
 TIMESTAMP_REGEX = re.compile(
@@ -56,18 +59,7 @@ def main():
         if timestamp is not None:
             tree.incr(timestamp)
 
-    # Find the sample space boundaries
-    # FIXME: Should this move into Histogram?
-    first_sample = datetime.datetime(*tree.least())
-    last_sample = datetime.datetime(*tree.greatest())
-
-    # Compute the bucket resolution
-    # FIXME: Allow this to be specified as a command-line option
-    sample_interval = last_sample - first_sample
-    total_seconds = sample_interval.total_seconds()
-    resolution = guess_resolution(total_seconds)
-
-    histogram = Histogram(tree, resolution)
+    histogram = Histogram(tree, RESOLUTION)
 
     for bucket in histogram.buckets:
         print bucket
