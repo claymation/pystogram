@@ -16,7 +16,8 @@ class Histogram(object):
         sample = first_sample
         while sample <= last_sample:
             bucket = Bucket(sample, self.resolution)
-            node = self.tree.sum(bucket.key)
+            node = self.tree.find(bucket.prefix)
+            bucket.value = node.sum() if node is not None else 0
             yield bucket
             sample += self.interval
 
@@ -45,18 +46,24 @@ class Bucket(object):
     def timestamp(self):
         return self.start.strftime(self.format)
 
-    # FIXME: What to call this?
     @property
-    def key(self):
-        key = [self.start.year]
+    def prefix(self):
+        """
+        Compute and return a key prefix for this bucket, based on its
+        start timestamp and resolution.
+        
+        For example, a bucket with start timestamp 1969-07-20 20:18:00
+        and resolution of 1 day yields a prefix of (1969, 7, 20).
+        """
+        prefix = [self.start.year]
         if self.resolution < YEAR:
-            key.append(self.start.month)
+            prefix.append(self.start.month)
         if self.resolution < MONTH:
-            key.append(self.start.day)
+            prefix.append(self.start.day)
         if self.resolution < DAY:
-            key.append(self.start.hour)
+            prefix.append(self.start.hour)
         if self.resolution < HOUR:
-            key.append(self.start.minute)
+            prefix.append(self.start.minute)
         if self.resolution < MINUTE:
-            key.append(self.start.second)
-        return key
+            prefix.append(self.start.second)
+        return prefix

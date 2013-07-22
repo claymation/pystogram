@@ -49,6 +49,13 @@ class Tree(collections.defaultdict):
 
     Each node is, in fact, a new Tree instance.
 
+    Two utility methods return the node for the specified key:
+    
+        >>> tree.find((1969, 7, 20))    # will not create the node if it does not exist
+        None
+        >>> tree.insert((1969, 7, 70))  # will create the node with an initial value of 0
+        node(key=20, value=0)
+
     Two utility methods return the least and greatest keys in the tree:
     
         >>> tree.least()
@@ -67,7 +74,7 @@ class Tree(collections.defaultdict):
         
         Returns None if the key is not found.
         """
-        node = self._find(key)
+        node = self.find(key)
         if node is not None:
             return node.value
 
@@ -75,7 +82,7 @@ class Tree(collections.defaultdict):
         """
         Set the value for the supplied key.
         """
-        node = self._insert(key)
+        node = self.insert(key)
         node.value = value
         return node.value
 
@@ -88,33 +95,33 @@ class Tree(collections.defaultdict):
 
         To decrement a key's value, pass a negative increment.
         """
-        node = self._insert(key)
+        node = self.insert(key)
         node.value += increment
         return node.value
 
-    def sum(self, key):
+    def sum(self):
         """
-        Return the sum of the key's value, plus all of the key's
+        Return the sum of this node's value plus all of the node's
         descendants' values.
         """
         total = self.value
-        for node in self.values():
-            total += node.sum(key[1:])
+        for child in self.values():
+            total += child.sum()
         return total
 
     def least(self):
         """
         Find and return the least key in the tree.
         """
-        return self._walk(0)
+        return self.walk(0)
 
     def greatest(self):
         """
         Find and return the greatest key in the tree.
         """
-        return self._walk(-1)
+        return self.walk(-1)
 
-    def _find(self, key):
+    def find(self, key):
         """
         Find and return the node given by the supplied key.
         
@@ -124,12 +131,12 @@ class Tree(collections.defaultdict):
             return self
 
         # `defaultdict.get()` does not create new instances for unknown keys
-        node = self.get(key[0])
+        node = super(Tree, self).get(key[0])
 
         if node is not None:
-            return node._find(key[1:])
+            return node.find(key[1:])
 
-    def _insert(self, key):
+    def insert(self, key):
         """
         Find and return the node given by the supplied key,
         creating it if it doesn't already exist.
@@ -140,9 +147,9 @@ class Tree(collections.defaultdict):
         # `defaultdict.__getitem__()` creates new instances for unknown keys
         node = self[key[0]]
 
-        return node._insert(key[1:])
+        return node.insert(key[1:])
 
-    def _walk(self, index):
+    def walk(self, index):
         """
         Construct a key by walking the tree, always branching the same way
         as determined by the supplied index.
@@ -158,8 +165,9 @@ class Tree(collections.defaultdict):
 
         key = self.sorted_keys[index]
         node = self[key]
-        return [key] + node._walk(index)
+        return [key] + node.walk(index)
 
+    
     @property
     def sorted_keys(self):
         """
