@@ -25,11 +25,11 @@ Example
 Usage
 -----
 
-`pystogram` is a UNIX filter, so you can pass file names on the command line:
+Pass log file names on the command line:
 
     $ pystogram /var/log/access.log
 
-or pipe (possibly filtered) log data:
+or pipe in some (possibly filtered) log data:
 
     $ grep lolcat /var/log/access.log | pystogram
 

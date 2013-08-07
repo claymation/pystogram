@@ -35,9 +35,9 @@ TIMESTAMP_REGEX = re.compile(
 )
 
 def get_timestamp(line):
-    # FIXME: Parse the timestamp with time.strptime()
     match = TIMESTAMP_REGEX.search(line)
     if match:
+        # FIXME: Parse the timestamp with time.strptime()
         return time.struct_time(sequence=(int(match.group('year')),
                                           MONTHS[match.group('month')],
                                           int(match.group('day')),
