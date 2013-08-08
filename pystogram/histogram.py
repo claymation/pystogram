@@ -1,6 +1,6 @@
 import datetime
 
-from pystogram.tree import Tree
+from pystogram.tree import PrefixTree
 
 
 SECOND = 1
@@ -39,13 +39,11 @@ class Histogram(object):
     into equally-sized intervals (buckets), and computing aggregate counts of the
     samples within each bucket.
     """
-    def __init__(self, Tree=Tree):
+    def __init__(self):
         """
         Construct a Histogram instance.
-
-        Optional `Tree` parameter specifies the Tree-like class to use to count and aggregate samples.
         """
-        self.tree = Tree()
+        self.tree = PrefixTree()
 
     def count(self, timestamp):
         """
@@ -55,12 +53,12 @@ class Histogram(object):
 
     @property
     def first_sample(self):
-        # FIXME: Subclass Tree into DateTimeTree so we don't have to do this conversion here?
+        # FIXME: Subclass PrefixTree into DateTimePrefixTree so we don't have to do this conversion here?
         return datetime.datetime(*self.tree.least())
 
     @property
     def last_sample(self):
-        # FIXME: Subclass Tree into DateTimeTree so we don't have to do this conversion here?
+        # FIXME: Subclass PrefixTree into DateTimePrefixTree so we don't have to do this conversion here?
         return datetime.datetime(*self.tree.greatest())
 
     @property

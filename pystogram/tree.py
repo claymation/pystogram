@@ -1,11 +1,11 @@
 import collections
 
 
-class Tree(collections.defaultdict):
+class PrefixTree(collections.defaultdict):
     """
     A purpose-built prefix tree for counting and aggregating timestamps.
 
-        >>> tree = Tree()
+        >>> tree = PrefixTree()
 
     Keys are tuples of integers, compatible with `time.struct_time` objects.
 
@@ -47,7 +47,7 @@ class Tree(collections.defaultdict):
                 |                       |                       |
       node(key=3, value=1)   node(key=18, value=1)   node(key=16, value=1)
 
-    Each node is, in fact, a new Tree instance.
+    Each node is, in fact, a new PrefixTree instance.
 
     Two utility methods return the node for the specified key:
     
@@ -65,7 +65,7 @@ class Tree(collections.defaultdict):
     """
 
     def __init__(self):
-        super(Tree, self).__init__(Tree)
+        super(PrefixTree, self).__init__(PrefixTree)
         self.value = 0
 
     def get(self, key):
@@ -131,7 +131,7 @@ class Tree(collections.defaultdict):
             return self
 
         # `defaultdict.get()` does not create new instances for unknown keys
-        node = super(Tree, self).get(key[0])
+        node = super(PrefixTree, self).get(key[0])
 
         if node is not None:
             return node.find(key[1:])
