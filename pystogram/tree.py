@@ -3,65 +3,88 @@ import collections
 
 class PrefixTree(collections.defaultdict):
     """
-    A purpose-built prefix tree for counting and aggregating timestamps.
+    A generic prefix tree (or trie) for counting and aggregating composite keys.
 
         >>> tree = PrefixTree()
 
-    Keys are tuples of integers, compatible with `time.struct_time` objects.
+    Keys are iterables of comparable, hashable objects, such as strings or tuples of integers.
 
-    You can increment a key:
+    Basic operations include incrementing a key:
     
-        >>> tree.incr((1969, 3, 3))
+        >>> tree.incr('monty')
         1
-        >>> tree.incr((1969, 5, 18), 2)
-        2
 
-     or set its value directly:
+     set a key's value directly:
 
-        >>> tree.set((1969, 7, 16), 3)
-        3
+        >>> tree.set('monty', 42)
+        42
     
-    You can get a key's value:
+    and getting a key's value:
     
-        >>> tree.get((2013, 3, 3))
+        >>> tree.get('monty')
+        42
+    
+    But the power of the prefix tree comes from being able to aggregate by key prefix. To demonstrate,
+    let's add some more keys to the tree:
+
+        >>> tree.incr('python')
+        1
+        >>> tree.incr('pylon')
+        1
+        >>> tree.incr('panda')
         1
     
-    or the sum of its value plus all of its descendants' values:
-    
-        >>> tree.sum((1969,))
-        6
-
     At this point, the tree looks like:
 
-                                    tree root
-                                        |
-                                        |
-                            node(key=1969, value=0)
-                                        |
-                                        |
-                +-----------------------+-----------------------+
-                |                       |                       |
-                |                       |                       |
-      node(key=3, value=0)    node(key=5, value=0)    node(key=7, value=0)
-                |                       |                       |
-                |                       |                       |
-      node(key=3, value=1)   node(key=18, value=1)   node(key=16, value=1)
+                                        tree root
+                                            |
+                +---------------------------+-------------------+
+                |                                               |
+    node(key='m', value=0)                          node(key='p', value=0)
+                |                                               |
+    node(key='o', value=0)              +-----------------------+---------------+
+                |                       |                                       |
+    node(key='n', value=0)    node(key='a', value=0)                node(key='y', value=0)
+                |                       |                                       |
+    node(key='t', value=0)    node(key='n', value=0)            +---------------+-------------+
+                |                       |                       |                             |
+    node(key='y', value=42)   node(key='d', value=0)    node(key='l', value=0)    node(key='t', value=0)
+                                        |                       |                             |
+                              node(key='a', value=1)    node(key='o', value=0)    node(key='h', value=0)
+                                                                |                             |
+                                                        node(key='n', value=1)    node(key='o', value=0)
+                                                                                              |
+                                                                                  node(key='n', value=1)
+
+    Now we can ask interesting questions like, "what's the frequency of keys starting with 'py'?":
+
+        >>> tree.find('py').sum()
+        2
 
     Each node is, in fact, a new PrefixTree instance.
 
     Two utility methods return the node for the specified key:
     
-        >>> tree.find((1969, 7, 20))    # will not create the node if it does not exist
-        None
-        >>> tree.insert((1969, 7, 70))  # will create the node with an initial value of 0
-        node(key=20, value=0)
+        >>> tree.find('grail') is None    # will not create the node if it does not exist
+        True
+
+        >>> tree.insert('grail') is None  # will create the node with an initial value of 0
+        False
 
     Two utility methods return the least and greatest keys in the tree:
     
         >>> tree.least()
-        (1969, 3, 3)
+        ['g', 'r', 'a', 'i', 'l']
+
         >>> tree.greatest()
-        (1969, 7, 16)
+        ['p', 'y', 't', 'h', 'o', 'n']
+
+    Note that keys are represented as tuples internally, so if your keys are strings, you'll
+    probably want to join the individual key characters back into a string:
+
+        >>> ''.join(tree.least())
+        'grail'
+
     """
 
     def __init__(self):
@@ -99,6 +122,7 @@ class PrefixTree(collections.defaultdict):
         node.value += increment
         return node.value
 
+    # FIXME: Probably need a better name for this ... aggregate()?
     def sum(self):
         """
         Return the sum of this node's value plus all of the node's
@@ -109,12 +133,14 @@ class PrefixTree(collections.defaultdict):
             total += child.sum()
         return total
 
+    # FIXME: Could we use min() instead?
     def least(self):
         """
         Find and return the least key in the tree.
         """
         return self.walk(0)
 
+    # FIXME: Could we use max() instead?
     def greatest(self):
         """
         Find and return the greatest key in the tree.
