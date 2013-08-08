@@ -18,4 +18,5 @@ setup(
     ],
     packages = ['pystogram'],
     scripts = ['bin/pystogram'],
+    tests_require = ['pytest'],
 )
