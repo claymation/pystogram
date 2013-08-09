@@ -56,12 +56,12 @@ class PrefixTree(collections.defaultdict):
                                                                                               |
                                                                                   node(key='n', value=1)
 
+    Each node is actually a new PrefixTree instance.
+
     Now we can ask interesting questions like, "what's the frequency of keys starting with 'py'?":
 
         >>> tree.find('py').sum()
         2
-
-    Each node is, in fact, a new PrefixTree instance.
 
     Two utility methods return the node for the specified key:
     
