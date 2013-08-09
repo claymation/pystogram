@@ -1,4 +1,5 @@
 import collections
+import datetime
 
 
 class PrefixTree(collections.defaultdict):
@@ -200,3 +201,37 @@ class PrefixTree(collections.defaultdict):
         Return a sorted list of this node's keys.
         """
         return sorted(self.keys())
+
+
+class TimestampPrefixTree(PrefixTree):
+    """
+    A purpose-built prefix tree for counting and aggregating timestamps.
+
+        >>> tree = TimestampPrefixTree()
+        >>> tree.incr((1969, 7, 20, 20, 17, 40))
+        1
+        >>> tree.incr((1969, 7, 21, 17, 54, 00))
+        1
+
+    Keys are tuples of integers, compatible with `time.struct_time` objects.
+
+    Two utility methods return the least and greatest keys in the tree,
+    as `datetime.datetime` objects:
+    
+        >>> tree.least()
+        datetime.datetime(1969, 7, 20, 20, 17, 40)
+        >>> tree.greatest()
+        datetime.datetime(1969, 7, 21, 17, 54)
+    """
+
+    def least(self):
+        """
+        Find and return the least key in the tree, as a `datetime.datetime` object.
+        """
+        return datetime.datetime(*super(TimestampPrefixTree, self).least())
+
+    def greatest(self):
+        """
+        Find and return the least key in the tree, as a `datetime.datetime` object.
+        """
+        return datetime.datetime(*super(TimestampPrefixTree, self).greatest())
