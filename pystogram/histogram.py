@@ -99,7 +99,7 @@ class Histogram(object):
 
         timestamp = first_sample
         while timestamp <= last_sample:
-            node = self.tree.find(prefix(timestamp, resolution))
+            node = self.tree.insert(prefix(timestamp, resolution))
             bucket = Bucket(timestamp, node)
             yield bucket
             timestamp += bucket_interval
