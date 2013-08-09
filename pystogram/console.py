@@ -1,3 +1,4 @@
+import math
 import shutil
 
 # FIXME: Import these from elsewhere?
@@ -64,7 +65,7 @@ class AsciiChart(object):
 
         for bucket in buckets:
             timestamp = bucket.start.strftime(timestamp_format)
-            bar = '*' * (bar_length * bucket.count // max_count)
+            bar = '*' * int(math.ceil(float(bar_length * bucket.count) / max_count))
             print(BUCKET_FORMAT.format(timestamp=timestamp, timestamp_length=timestamp_length,
                                        bar=bar, bar_length=bar_length,
                                        count=bucket.count, count_length=count_length))
