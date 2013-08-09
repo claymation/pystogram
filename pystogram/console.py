@@ -1,8 +1,11 @@
+import shutil
+
 # FIXME: Import these from elsewhere?
 from .histogram import SECOND, MINUTE, HOUR, DAY, MONTH, YEAR
 
 
-DEFAULT_WIDTH = 78
+DEFAULT_CONSOLE_WIDTH = 80
+PADDING = 2
 
 # FIXME: embed timestamp format characters here
 BUCKET_FORMAT = '{timestamp:{timestamp_length}s}  {bar:{bar_length}s}   {count:{count_length}d}'
@@ -11,9 +14,12 @@ BUCKET_FORMAT = '{timestamp:{timestamp_length}s}  {bar:{bar_length}s}   {count:{
 MINIMUM_BAR_LENGTH = 10
 
 
-# FIXME: Determine width from console dimensions
 def get_console_width():
-    return DEFAULT_WIDTH
+    try:
+        # Available in Python >= 3.3
+        return shutil.get_terminal_size().columns
+    except AttributeError:
+        return DEFAULT_CONSOLE_WIDTH
 
 
 class AsciiChart(object):
@@ -27,7 +33,7 @@ class AsciiChart(object):
         """
         Draw the histogram at the desired resolution to stdout.
         """
-        if width is None: width = get_console_width()
+        if width is None: width = get_console_width() - PADDING
         if resolution is None: resolution = self.histogram.sample_resolution
 
         # Construct bucket list
