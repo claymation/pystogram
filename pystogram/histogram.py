@@ -105,12 +105,10 @@ class Histogram(object):
             timestamp += bucket_interval
 
 
-# FIXME: If Bucket has no behaviour, only state, could we use a namedtuple instead?
 class Bucket(object):
     """
     Histogram bucket for a given time interval.
     """
-    # FIXME: This ought to take resolution and/or interval
     def __init__(self, start, node):
         self.start = start
         self.node = node
